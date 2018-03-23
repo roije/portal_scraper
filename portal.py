@@ -38,13 +38,38 @@ class PortalScraper():
         return search_person_article_links
     
     def scrape_articles(self, articles):
-        test = 0
+        # test = 0
         for article in articles:
-            test_file = "test-" + str(test) + ".txt"
+            # test_file = "test-" + str(test) + ".txt"
             comment_section_soup = self.get_comment_section(article)
+            self.extract_comment_data(comment_section_soup, article)
+            '''
             with open(test_file, "w", encoding="utf-8") as fo:
                 fo.write(str(comment_section_soup.prettify()))
             test = test + 1
+            '''
+    
+    def extract_comment_data(self, comment_section_soup, article):
+        comment_divs = comment_section_soup.find_all(class_='UFICommentActorName')
+        for comment_div in comment_divs:
+            # Get commenter name and compare it with the person we are searching for
+            commenter_name = comment_div.text
+            if(commenter_name == self.person):
+                print('This is ', self.person)
+                person_dict = {}
+    
+                # Traverse to parent span, so that we can traverse to the other divs from here
+                parent_span = comment_div.parent
+
+                # Go to the next sibling of the parent span. This is where the comment is located
+                comment_sibling_div = parent_span.find_next_sibling()
+                comment_text = comment_sibling_div.text
+
+                person_dict['name'] = commenter_name
+                person_dict['text'] = comment_text
+                person_dict['article'] = article
+                print(person_dict)
+
     
     def get_comment_section(self, article):
         """
@@ -63,11 +88,14 @@ class PortalScraper():
             element_present = EC.presence_of_element_located((By.CLASS_NAME, 'fb_iframe_widget'))
             WebDriverWait(driver, timeout).until(element_present)
 
+            # wait for fb_iframe_widget_loader to disappear
+            self.wait_until_disappeared(driver, 'fb_iframe_widget_loader')
+
             # Now the Facebook plugin has been loaded
             # First get innerHTML of the page and use BeautifulSoup HTML parser so that we can work with it
             innerHTML = driver.execute_script("return document.body.innerHTML") #returns the inner HTML as a string
             soup_comments = BeautifulSoup(innerHTML, 'html.parser')
-            
+
             # This is the Facebook comments plugin which is an iframe
             facebook_plugin_iframe = soup_comments.find('iframe', class_="fb_ltr")
             frame_id = facebook_plugin_iframe.get('id')
@@ -78,6 +106,7 @@ class PortalScraper():
             # Then get innerHTML of the iframe and use BeautifulSoup so that we can work with it
             driver.switch_to_default_content()
             driver.switch_to.frame(frame_id)
+            self.press_load_more_comments_if_present(driver)
             self.press_open_replies_if_present(driver)
             iframe_innerhtml = driver.execute_script("return document.body.innerHTML") #returns the inner HTML as a string
             iframe_soup = BeautifulSoup(iframe_innerhtml, 'html.parser')
@@ -85,8 +114,22 @@ class PortalScraper():
 
         except TimeoutException:
             print("Timed out waiting for page to load")
+    
+    def wait_until_disappeared(self, driver ,element):
+        timeout = 10
+        try:
+            element = WebDriverWait(driver, timeout).until(EC.invisibility_of_element_located((By.CLASS_NAME, element)))    
+        except TimeoutException:
+            print("Timed out waiting for element to disappear") 
 
-    def press_open_replies_if_present(self, driver):
+    def press_load_more_comments_if_present(self, driver):
+        load_more_buttons = driver.find_elements_by_xpath("//*[contains(text(), 'more comments')]")
+        for load_button in load_more_buttons:
+            # Navigate one level up to the anchor tag
+            driver.execute_script("arguments[0].scrollIntoView();", load_button)
+            load_button.click()
+
+    def press_open_replies_if_present(  self, driver):
         """
             -- This method is only meant to be used in this file --
         """

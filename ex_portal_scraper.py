@@ -5,9 +5,10 @@ from bs4 import BeautifulSoup
 portal_scraper = PortalScraper('Jóan Pauli Í Geil', 'http://portal.fo/seinastu+vidmerkingarnar.html')
 
 comment_articles = portal_scraper.get_person_article_links()
+print(comment_articles)
 portal_scraper.scrape_articles(comment_articles)
 '''
-with open("test-1.txt", "r", encoding="utf-8") as myfile:
+with open("test-0.txt", "r", encoding="utf-8") as myfile:
     comments = myfile.read()
 
 
@@ -24,6 +25,7 @@ for bob in test:
 
     #From here we can extract the comment
     comment_sibling_div = parent_div.find_next_sibling()
+    print(comment_sibling_div.text)
 
     #The comment
     comment = comment_sibling_div.text
