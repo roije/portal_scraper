@@ -1,4 +1,5 @@
 import requests
+import hashlib
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
@@ -6,6 +7,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
+from hashchecker import HashChecker
 
 class PortalScraper():
 
@@ -25,18 +27,25 @@ class PortalScraper():
             Reads through the init page (http://portal.fo/seinastu+vidmerkingarnar.html)
             And gets every comment of search person and stores the link to article in which 
             the comment was given in a Set.
-            Returns: Set
+            Returns: Set if page is changed, and None if nothing has changed.
         """
         comment_items = self.init_soup.find_all("div", class_="comment_item")
-        search_person_article_links = set()
+        hash_checker = HashChecker()
+        hash_checker.generate_hash(comment_items)
 
-        for comment in comment_items:
-            commenter_name = comment.find(class_="comment_profilename").text
-            if(commenter_name == self.person):
-                search_person_article_links.add(comment.parent.get('href'))
-        
-        return search_person_article_links
-    
+        # Will compare with the hash saved in prev_hash.txt
+        page_has_changed = hash_checker.hash_compare()
+        if page_has_changed:
+            hash_checker.save_new_hash()
+            search_person_article_links = set()
+            for comment in comment_items:
+                commenter_name = comment.find(class_="comment_profilename").text
+                if(commenter_name == self.person):
+                    search_person_article_links.add(comment.parent.get('href'))
+            return search_person_article_links
+        else:
+            return None
+
     def scrape_articles(self, articles):
         # test = 0
         for article in articles:
@@ -59,15 +68,34 @@ class PortalScraper():
                 person_dict = {}
     
                 # Traverse to parent span, so that we can traverse to the other divs from here
+                # PARENT
                 parent_span = comment_div.parent
-
+                
+                # GO TO TOP SIBLING OF PARENT
                 # Go to the next sibling of the parent span. This is where the comment is located
                 comment_sibling_div = parent_span.find_next_sibling()
+                # print(comment_sibling_div)
                 comment_text = comment_sibling_div.text
+                
+                # GO TO TOP SIBLING OF COMMENT_SIBLING
+                # Div that contains lin to comment and time of comment
+                like_time_sibling_div = comment_sibling_div.find_next_sibling()
+                # print('Hey', like_time_sibling_div.prettify())
+                
+                # Check if the i tag exists. Then there are likes
+                likes = ''
+                for child in like_time_sibling_div.children:
+                    itag = child.find('i')
+                    if itag:
+                        likes = child.text
 
+                comment_utime = like_time_sibling_div.find("abbr", { "class" : "UFISutroCommentTimestamp"}).get('data-utime')
+                
                 person_dict['name'] = commenter_name
                 person_dict['text'] = comment_text
                 person_dict['article'] = article
+                person_dict['likes'] = likes
+                person_dict['comment_utime'] = comment_utime
                 print(person_dict)
 
     
