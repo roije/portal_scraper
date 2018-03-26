@@ -1,5 +1,6 @@
 import requests
 import hashlib
+from config import Config
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
@@ -8,12 +9,14 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
 from hashchecker import HashChecker
+from db import DatabaseConnector
 
 class PortalScraper():
 
     def __init__(self, person, init_page):
         self.person = person
         self.init_soup = self.request_init_page(init_page)
+        self.db = DatabaseConnector(Config.DATABASE)
 
     def request_init_page(self, init_page):
          # request portal.fo 
@@ -96,7 +99,8 @@ class PortalScraper():
                 person_dict['article'] = article
                 person_dict['likes'] = likes
                 person_dict['comment_utime'] = comment_utime
-                print(person_dict)
+                
+                self.db.insert_comment(person_dict)
 
     
     def get_comment_section(self, article):
@@ -107,7 +111,7 @@ class PortalScraper():
             This method uses Selenium, so we can wait for the plugin to have been loaded
             Returns: Soup for each article comment section (BeautifulSoup object)
         """
-        driver = webdriver.Chrome()
+        driver = Config.get_driver()
         driver.get(article)
         timeout = 10
         try:

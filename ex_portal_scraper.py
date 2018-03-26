@@ -2,21 +2,14 @@
 from portal import PortalScraper
 from bs4 import BeautifulSoup
 import hashlib
-'''
-html_old = "<html>Comments here</html>"
-html_new = "<html>New comments here</html>"
 
-old_md5 = hashlib.md5(html_old.encode("utf-8"))
-new_md5 = hashlib.md5(html_new.encode("utf-8"))
-print(old_md5.hexdigest())
-print(new_md5.hexdigest())
-'''
-portal_scraper = PortalScraper('Jóan Pauli Í Geil', 'http://portal.fo/seinastu+vidmerkingarnar.html')
+portal_scraper = PortalScraper('John Petersen', 'http://portal.fo/seinastu+vidmerkingarnar.html')
 
 comment_articles = portal_scraper.get_person_article_links()
 print(comment_articles)
 if comment_articles:
     portal_scraper.scrape_articles(comment_articles)
+    
 
 
 
