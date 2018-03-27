@@ -16,6 +16,6 @@ class DatabaseConnector():
     def check_if_exists(self, comment_dictionary):
         comment = self.db.comments.find_one(
             {"text" : comment_dictionary["text"], 
-            "comment_utime" : comment_dictionary["comment_utime"]})
+            "comment_timestamp" : comment_dictionary["comment_timestamp"]})
         return comment
 

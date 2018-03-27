@@ -10,6 +10,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
 from hashchecker import HashChecker
 from db import DatabaseConnector
+import datetime
 
 class PortalScraper():
 
@@ -60,49 +61,7 @@ class PortalScraper():
                 fo.write(str(comment_section_soup.prettify()))
             test = test + 1
             '''
-    
-    def extract_comment_data(self, comment_section_soup, article):
-        comment_divs = comment_section_soup.find_all(class_='UFICommentActorName')
-        for comment_div in comment_divs:
-            # Get commenter name and compare it with the person we are searching for
-            commenter_name = comment_div.text
-            if(commenter_name == self.person):
-                print('This is ', self.person)
-                person_dict = {}
-    
-                # Traverse to parent span, so that we can traverse to the other divs from here
-                # PARENT
-                parent_span = comment_div.parent
-                
-                # GO TO TOP SIBLING OF PARENT
-                # Go to the next sibling of the parent span. This is where the comment is located
-                comment_sibling_div = parent_span.find_next_sibling()
-                # print(comment_sibling_div)
-                comment_text = comment_sibling_div.text
-                
-                # GO TO TOP SIBLING OF COMMENT_SIBLING
-                # Div that contains lin to comment and time of comment
-                like_time_sibling_div = comment_sibling_div.find_next_sibling()
-                # print('Hey', like_time_sibling_div.prettify())
-                
-                # Check if the i tag exists. Then there are likes
-                likes = ''
-                for child in like_time_sibling_div.children:
-                    itag = child.find('i')
-                    if itag:
-                        likes = child.text
 
-                comment_utime = like_time_sibling_div.find("abbr", { "class" : "UFISutroCommentTimestamp"}).get('data-utime')
-                
-                person_dict['name'] = commenter_name
-                person_dict['text'] = comment_text
-                person_dict['article'] = article
-                person_dict['likes'] = likes
-                person_dict['comment_utime'] = comment_utime
-                
-                self.db.insert_comment(person_dict)
-
-    
     def get_comment_section(self, article):
         """
             -- This method is only meant to be used in this file --
@@ -180,6 +139,50 @@ class PortalScraper():
         except TimeoutException:
             print("Timed out waiting for element to disappear") 
 
+    def extract_comment_data(self, comment_section_soup, article):
+        comment_divs = comment_section_soup.find_all(class_='UFICommentActorName')
+        for comment_div in comment_divs:
+            # Get commenter name and compare it with the person we are searching for
+            commenter_name = comment_div.text
+            if(commenter_name == self.person):
+                print('This is ', self.person)
+                person_dict = {}
+    
+                # Traverse to parent span, so that we can traverse to the other divs from here
+                # PARENT
+                parent_span = comment_div.parent
+                
+                # GO TO TOP SIBLING OF PARENT
+                # Go to the next sibling of the parent span. This is where the comment is located
+                comment_sibling_div = parent_span.find_next_sibling()
+                # print(comment_sibling_div)
+                comment_text = comment_sibling_div.text
+                
+                # GO TO TOP SIBLING OF COMMENT_SIBLING
+                # Div that contains lin to comment and time of comment
+                like_time_sibling_div = comment_sibling_div.find_next_sibling()
+                # print('Hey', like_time_sibling_div.prettify())
+                
+                # Check if the i tag exists. Then there are likes
+                likes = ''
+                for child in like_time_sibling_div.children:
+                    itag = child.find('i')
+                    if itag:
+                        likes = child.text
+
+                comment_utime = like_time_sibling_div.find("abbr", { "class" : "UFISutroCommentTimestamp"}).get('data-utime')
+                comment_timestamp = self.utime_to_timespamp(comment_utime)
+                
+                person_dict['name'] = commenter_name
+                person_dict['text'] = comment_text
+                person_dict['article'] = article
+                person_dict['likes'] = likes
+                person_dict['comment_timestamp'] = comment_timestamp
+                
+                self.db.insert_comment(person_dict)
+
+    def utime_to_timespamp(self, utime):
+        return datetime.datetime.fromtimestamp(int(utime)).strftime('%Y-%m-%d %H:%M:%S')
 
     def __repr__(self):
         return "Search person: %s" % (self.init_soup)
