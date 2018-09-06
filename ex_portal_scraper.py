@@ -3,7 +3,7 @@ from portal import PortalScraper
 from bs4 import BeautifulSoup
 import hashlib
 
-portal_scraper = PortalScraper('Torri Thomsen', 'http://portal.fo/seinastu+vidmerkingarnar.html')
+portal_scraper = PortalScraper('person name', 'http://portal.fo/seinastu+vidmerkingarnar.html')
 
 comment_articles = portal_scraper.get_person_article_links()
 print(comment_articles)
